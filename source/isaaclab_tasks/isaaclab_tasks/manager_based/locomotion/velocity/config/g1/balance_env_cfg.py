@@ -35,8 +35,6 @@ from pathlib import Path
 #####################################################
 ########### board for ArticulationCfg ###############
 #####################################################
-
-
 script_dir = Path(__file__).parent
 usd_path = str(script_dir / "separeted_model/board/board_articulation.usdz")
 BOARD_CFG = ArticulationCfg(
@@ -165,7 +163,7 @@ class G1SceneCfg(InteractiveSceneCfg):
 
     # robots
     robot: ArticulationCfg = MISSING
-    board: ArticulationCfg = BOARD_CFG
+    board: ArticulationCfg= BOARD_CFG
     static_plane: RigidObjectCfg = PLANE_CFG
     cylinder: RigidObjectCfg = ROLLER_CFG
 

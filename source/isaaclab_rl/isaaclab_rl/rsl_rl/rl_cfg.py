@@ -66,6 +66,25 @@ class RslRlPpoActorCriticRecurrentCfg(RslRlPpoActorCriticCfg):
     rnn_num_layers: int = MISSING
     """The number of RNN layers."""
 
+@configclass
+class RslRlGenpoActorCriticCfg(RslRlPpoActorCriticCfg):
+    """Configuration for the PPO actor-critic networks with recurrent layers."""
+
+    class_name: str = "ActorCriticGenPO"
+    """The policy class name. Default is ActorCriticRecurrent."""
+
+    flow_num_steps: int = MISSING
+    """The number of steps taken by flow."""
+
+
+    mix_para: float = MISSING
+
+    time_dim: int = MISSING
+
+    time_hidden_dims: list[int] = MISSING
+
+    std: float = MISSING
+
 
 ############################
 # Algorithm configurations #
@@ -128,7 +147,19 @@ class RslRlPpoAlgorithmCfg:
     symmetry_cfg: RslRlSymmetryCfg | None = None
     """The symmetry configuration. Default is None, in which case symmetry is not used."""
 
+@configclass
+class RslRlGenpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
+    """Configuration for the PPO actor-critic networks with recurrent layers."""
 
+    class_name: str = " GenPO"
+    """The policy class name. Default is ActorCriticRecurrent."""
+    
+
+    compress_coef: float | None = None
+
+    use_compress: bool | None = None
+
+    use_entropy: bool | None = None
 #########################
 # Runner configurations #
 #########################
@@ -199,13 +230,13 @@ class RslRlBaseRunnerCfg:
     ``{time-stamp}_{run_name}``.
     """
 
-    logger: Literal["tensorboard", "neptune", "wandb"] = "tensorboard"
+    logger: Literal["tensorboard", "neptune", "wandb"] = "wandb"
     """The logger to use. Default is tensorboard."""
 
-    neptune_project: str = "isaaclab"
+    neptune_project: str = "isaaclab2.3"
     """The neptune project name. Default is "isaaclab"."""
 
-    wandb_project: str = "isaaclab"
+    wandb_project: str = "isaaclab2.3"
     """The wandb project name. Default is "isaaclab"."""
 
     resume: bool = False
