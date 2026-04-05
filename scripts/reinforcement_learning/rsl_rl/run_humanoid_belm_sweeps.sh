@@ -15,6 +15,12 @@ SAVE_INTERVAL="${SAVE_INTERVAL:-}"
 EXPERIMENT_PREFIX="${EXPERIMENT_PREFIX:-belm_sweep}"
 HEADLESS="${HEADLESS:-1}"
 NUM_ENVS="${NUM_ENVS:-}"
+NPROC_PER_NODE="${NPROC_PER_NODE:-8}"
+NNODES="${NNODES:-1}"
+NODE_RANK="${NODE_RANK:-0}"
+MASTER_ADDR="${MASTER_ADDR:-127.0.0.1}"
+MASTER_PORT="${MASTER_PORT:-29500}"
+DISTRIBUTED="${DISTRIBUTED:-1}"
 INSTALL_EDITABLE="${INSTALL_EDITABLE:-0}"
 A_SWEEP="${A_SWEEP:-0.0,0.05,0.25,0.5}"
 B_SWEEP="${B_SWEEP:-0.5,0.75,0.95,1.1}"
@@ -38,7 +44,13 @@ Environment overrides:
   SAVE_INTERVAL     Optional global Hydra override for agent.save_interval. Default: use each task cfg.
   EXPERIMENT_PREFIX Prefix added to generated experiment_name values. Default: belm_sweep
   HEADLESS          1 to add --headless, 0 otherwise. Default: 1
-  NUM_ENVS          Optional global --num_envs override. Default: use each task cfg.
+  NUM_ENVS          Optional global --num_envs override. Interpreted per process in distributed mode.
+  DISTRIBUTED       1 to launch with torch.distributed.run, 0 for a single local process. Default: 1
+  NPROC_PER_NODE    Number of local training processes / GPUs. Default: 8
+  NNODES            Number of nodes for distributed launch. Default: 1
+  NODE_RANK         Rank of the current node in a multi-node launch. Default: 0
+  MASTER_ADDR       Master node address for multi-node launch. Default: 127.0.0.1
+  MASTER_PORT       Master node port for multi-node launch. Default: 29500
   INSTALL_EDITABLE  1 to install local rsl_rl before runs, 0 otherwise. Default: 0
   A_SWEEP           Comma-separated A values. Default: 0.0,0.05,0.25,0.5
   B_SWEEP           Comma-separated B values. Default: 0.5,0.75,0.95,1.1
@@ -47,7 +59,8 @@ Environment overrides:
 Examples:
   bash ${0##*/}
   TASKS=Isaac-Velocity-Rough-H1-v0,Isaac-Humanoid-v0 SEEDS=1,2 bash ${0##*/}
-  MAX_ITERATIONS=800 SAVE_INTERVAL=100 NUM_ENVS=4096 bash ${0##*/}
+  NUM_ENVS=512 DISTRIBUTED=1 NPROC_PER_NODE=8 bash ${0##*/}
+  DISTRIBUTED=0 NUM_ENVS=4096 bash ${0##*/}
 EOF
 }
 
@@ -137,6 +150,21 @@ build_experiment_name() {
     echo "${prefix}${task_label}_${variant}_seed${seed}"
 }
 
+print_num_envs_summary() {
+    if [[ -z "${NUM_ENVS}" ]]; then
+        echo "Num envs override: <task cfg default>"
+        return
+    fi
+
+    if [[ "${DISTRIBUTED}" == "1" ]]; then
+        local total_envs=$((NUM_ENVS * NPROC_PER_NODE * NNODES))
+        echo "Num envs override: ${NUM_ENVS} per process"
+        echo "Total num envs: ${total_envs} (${NNODES} node(s) x ${NPROC_PER_NODE} proc(s)/node x ${NUM_ENVS} envs/proc)"
+    else
+        echo "Num envs override: ${NUM_ENVS}"
+    fi
+}
+
 run_once() {
     local task="$1"
     local experiment_name="$2"
@@ -155,6 +183,10 @@ run_once() {
 
     if [[ "${HEADLESS}" == "1" ]]; then
         run_args+=(--headless)
+    fi
+
+    if [[ "${DISTRIBUTED}" == "1" ]]; then
+        run_args+=(--distributed)
     fi
 
     if [[ -n "${NUM_ENVS}" ]]; then
@@ -176,6 +208,15 @@ run_once() {
     echo "==== Running ${task} :: ${label} ===="
     echo "Experiment name: ${experiment_name}"
     echo "wandb_project: ${wandb_project}"
+    if [[ "${DISTRIBUTED}" == "1" ]]; then
+        local total_envs="<task cfg default>"
+        if [[ -n "${NUM_ENVS}" ]]; then
+            total_envs=$((NUM_ENVS * NPROC_PER_NODE * NNODES))
+        fi
+        echo "Launch mode: distributed (${NNODES} node(s), ${NPROC_PER_NODE} proc(s)/node, total envs: ${total_envs})"
+    else
+        echo "Launch mode: single process"
+    fi
     printf 'Overrides:'
     for arg in "${hydra_args[@]}"; do
         printf ' %q' "${arg}"
@@ -184,7 +225,17 @@ run_once() {
 
     (
         cd "${ISAACLAB_ROOT}"
-        ./isaaclab.sh -p "${TRAIN_SCRIPT}" "${run_args[@]}" "${hydra_args[@]}"
+        if [[ "${DISTRIBUTED}" == "1" ]]; then
+            ./isaaclab.sh -p -m torch.distributed.run \
+                --nnodes="${NNODES}" \
+                --nproc_per_node="${NPROC_PER_NODE}" \
+                --node_rank="${NODE_RANK}" \
+                --master_addr="${MASTER_ADDR}" \
+                --master_port="${MASTER_PORT}" \
+                "${TRAIN_SCRIPT}" "${run_args[@]}" "${hydra_args[@]}"
+        else
+            ./isaaclab.sh -p "${TRAIN_SCRIPT}" "${run_args[@]}" "${hydra_args[@]}"
+        fi
     )
 }
 
@@ -196,7 +247,12 @@ echo "Seeds: ${SEEDS}"
 echo "Max iterations override: ${MAX_ITERATIONS:-<task cfg default>}"
 echo "Save interval override: ${SAVE_INTERVAL:-<task cfg default>}"
 echo "Experiment prefix: ${EXPERIMENT_PREFIX}"
-echo "Num envs override: ${NUM_ENVS:-<task cfg default>}"
+echo "Distributed launch: ${DISTRIBUTED}"
+if [[ "${DISTRIBUTED}" == "1" ]]; then
+    echo "Distributed workers: ${NNODES} node(s) x ${NPROC_PER_NODE} proc(s)/node"
+    echo "Rendezvous: ${MASTER_ADDR}:${MASTER_PORT} (node rank ${NODE_RANK})"
+fi
+print_num_envs_summary
 echo "A sweep: ${A_SWEEP}"
 echo "B sweep: ${B_SWEEP}"
 echo "eps sweep: ${EPS_SWEEP}"
