@@ -103,3 +103,29 @@ def test_nested_iterable_dict():
     # clean up
     sys.argv = [sys.argv[0]]
     hydra.core.global_hydra.GlobalHydra.instance().clear()
+
+
+def test_belm_hydra_policy_coeff_overrides():
+    """Test that BELM policy coefficient overrides propagate through Hydra."""
+
+    sys.argv = [
+        sys.argv[0],
+        "agent.policy.a_coeff=0.25",
+        "agent.policy.b_coeff=0.75",
+        "agent.policy.eps_coeff=2.0",
+        "agent.policy.lag_coeff=null",
+    ]
+
+    @hydra_task_config_test("Isaac-Humanoid-v0", "belm_genpo")
+    def main(env_cfg, agent_cfg):
+        del env_cfg
+        assert agent_cfg.policy.class_name == "ActorCriticBELMGenPO"
+        assert agent_cfg.policy.a_coeff == 0.25
+        assert agent_cfg.policy.b_coeff == 0.75
+        assert agent_cfg.policy.eps_coeff == 2.0
+        assert agent_cfg.policy.lag_coeff is None
+
+    main()
+    # clean up
+    sys.argv = [sys.argv[0]]
+    hydra.core.global_hydra.GlobalHydra.instance().clear()

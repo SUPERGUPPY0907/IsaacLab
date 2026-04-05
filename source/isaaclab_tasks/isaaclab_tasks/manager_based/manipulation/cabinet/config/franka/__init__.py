@@ -23,6 +23,8 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:CabinetPPORunnerCfg",
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:CabinetBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:CabinetBELMGenPORunnerCfg",
     },
     disable_env_checker=True,
 )
@@ -35,6 +37,8 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:CabinetPPORunnerCfg",
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:CabinetBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:CabinetBELMGenPORunnerCfg",
     },
     disable_env_checker=True,
 )

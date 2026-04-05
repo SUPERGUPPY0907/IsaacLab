@@ -66,16 +66,16 @@ class RslRlPpoActorCriticRecurrentCfg(RslRlPpoActorCriticCfg):
     rnn_num_layers: int = MISSING
     """The number of RNN layers."""
 
+
 @configclass
 class RslRlGenpoActorCriticCfg(RslRlPpoActorCriticCfg):
-    """Configuration for the PPO actor-critic networks with recurrent layers."""
+    """Configuration for the GenPO actor-critic networks."""
 
     class_name: str = "ActorCriticGenPO"
-    """The policy class name. Default is ActorCriticRecurrent."""
+    """The policy class name. Default is ActorCriticGenPO."""
 
     flow_num_steps: int = MISSING
     """The number of steps taken by flow."""
-
 
     mix_para: float = MISSING
 
@@ -84,6 +84,69 @@ class RslRlGenpoActorCriticCfg(RslRlPpoActorCriticCfg):
     time_hidden_dims: list[int] = MISSING
 
     std: float = MISSING
+
+
+@configclass
+class RslRlBelmGenpoActorCriticCfg(RslRlGenpoActorCriticCfg):
+    """Configuration for the BELM-GenPO actor-critic networks."""
+
+    class_name: str = "ActorCriticBELMGenPO"
+    """The policy class name. Default is ActorCriticBELMGenPO."""
+
+    lag_coeff: float | None = 0.95
+    """Legacy lag coefficient alias used by the BELM flow policy."""
+
+    a_coeff: float | None = 0.05
+    """Optional BELM coefficient applied to the current state term."""
+
+    b_coeff: float | None = 0.95
+    """Optional BELM coefficient applied to the lagged state term."""
+
+    eps_coeff: float | None = 1.0
+    """Optional BELM coefficient applied to the score-network term."""
+
+
+@configclass
+class RslRlLeapfrogActorCriticCfg(RslRlPpoActorCriticCfg):
+    """Configuration for the leapfrog-flow actor-critic networks."""
+
+    class_name: str = "ActorCriticLeapfrog"
+    """The policy class name. Default is ActorCriticLeapfrog."""
+
+    flow_num_steps: int = 5
+    """The number of leapfrog integration steps."""
+
+    std: float = 1.0
+    """The standard deviation used by leapfrog flow."""
+
+    time_dim: int = 32
+    """The time embedding dimension."""
+
+    flow_interations: int = 5
+    """The number of distillation iterations used by leapfrog flow."""
+
+    flow_distill_batch_size: int = 256
+    """The distillation batch size used by leapfrog flow."""
+
+    time_hidden_dims: list[int] = MISSING
+    """The hidden dimensions of the time embedding MLP."""
+
+
+@configclass
+class RslRlMoserActorCriticCfg(RslRlPpoActorCriticCfg):
+    """Configuration for the Moser-flow actor-critic networks."""
+
+    class_name: str = "ActorCriticMoser"
+    """The policy class name. Default is ActorCriticMoser."""
+
+    envelope_scale: float = 1.0
+    """The envelope scale used by the Moser flow policy."""
+
+    ode: str = "rk4"
+    """The ODE solver used by the Moser flow policy."""
+
+    flow_num_steps: int = 10
+    """The number of ODE integration steps."""
 
 
 ############################
@@ -149,17 +212,100 @@ class RslRlPpoAlgorithmCfg:
 
 @configclass
 class RslRlGenpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
-    """Configuration for the PPO actor-critic networks with recurrent layers."""
+    """Configuration for the GenPO algorithm."""
 
-    class_name: str = " GenPO"
-    """The policy class name. Default is ActorCriticRecurrent."""
-    
+    class_name: str = "GenPO"
+    """The algorithm class name. Default is GenPO."""
 
     compress_coef: float | None = None
 
     use_compress: bool | None = None
 
     use_entropy: bool | None = None
+
+
+@configclass
+class RslRlGenpoPushforwardClipAlgorithmCfg(RslRlGenpoAlgorithmCfg):
+    """Configuration for the GenPO pushforward-clip algorithm."""
+
+    class_name: str = "GenPOPFClip"
+    """The algorithm class name. Default is GenPOPFClip."""
+
+    log_clip_delta: float | None = None
+    """The log-ratio clipping delta used in pushforward clipping."""
+
+    pf_num_samples: int = 2
+    """The number of pushforward proposal samples."""
+
+
+@configclass
+class RslRlGenpoU0ClipAlgorithmCfg(RslRlGenpoAlgorithmCfg):
+    """Configuration for the GenPO U0-clip algorithm."""
+
+    class_name: str = "GenPOU0Clip"
+    """The algorithm class name. Default is GenPOU0Clip."""
+
+    log_clip_delta: float | None = None
+    """The log-ratio clipping delta used in section clipping."""
+
+
+@configclass
+class RslRlGenpoPlusPlusAlgorithmCfg(RslRlGenpoAlgorithmCfg):
+    """Configuration for the GenPO++ algorithm."""
+
+    class_name: str = "GenPO++"
+    """The algorithm class name. Default is GenPO++."""
+
+    lambda_dir: float = 0.0
+    """The directional diversity regularization weight."""
+
+    directional_num_samples: int = 4
+    """The number of directional samples generated per anchor action."""
+
+    directional_advantage_quantile: float = 0.75
+    """The quantile threshold used to select directional anchors."""
+
+    directional_max_groups: int = 32
+    """The maximum number of anchor groups used for directional regularization."""
+
+    directional_eps: float = 1.0e-8
+    """Numerical epsilon used when normalizing directional latent vectors."""
+
+    lambda_mirror: float = 0.0
+    """The mirror consistency regularization weight."""
+
+
+@configclass
+class RslRlLeapfrogAlgorithmCfg(RslRlPpoAlgorithmCfg):
+    """Configuration for the leapfrog-flow PPO algorithm."""
+
+    class_name: str = "LeapfrogPPO"
+    """The algorithm class name. Default is LeapfrogPPO."""
+
+    compress_coef: float = 0.0
+    """The coefficient for leapfrog compression loss."""
+
+    use_compress: bool = True
+    """Whether to use leapfrog compression loss."""
+
+    use_entropy: bool = True
+    """Whether to use entropy loss."""
+
+
+@configclass
+class RslRlMoserAlgorithmCfg(RslRlPpoAlgorithmCfg):
+    """Configuration for the Moser-flow PPO algorithm."""
+
+    class_name: str = "MoserPPO"
+    """The algorithm class name. Default is MoserPPO."""
+
+    lambda_minus: float = 1.0
+    """Regularization coefficient for the positivity term."""
+
+    sigma: float = 1e-3
+    """Numerical stabilization value for probability clamping."""
+
+
 #########################
 # Runner configurations #
 #########################

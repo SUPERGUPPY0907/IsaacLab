@@ -16,6 +16,7 @@ from isaaclab.app import AppLauncher
 # local imports
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."))
 from scripts.reinforcement_learning.rsl_rl import cli_args  # isort: skip
+from scripts.reinforcement_learning.rsl_rl import runner_utils  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Play an RL agent with RSL-RL with policy transfer.")
@@ -63,7 +64,6 @@ import time
 import gymnasium as gym
 import torch
 import yaml
-from rsl_rl.runners import DistillationRunner, OnPolicyRunner
 
 from isaaclab.envs import (
     DirectMARLEnv,
@@ -196,12 +196,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg | DirectRLEnvCfg | DirectMARLEnvCfg, agen
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
-    if agent_cfg.class_name == "OnPolicyRunner":
-        runner = OnPolicyRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    elif agent_cfg.class_name == "DistillationRunner":
-        runner = DistillationRunner(env, agent_cfg.to_dict(), log_dir=None, device=agent_cfg.device)
-    else:
-        raise ValueError(f"Unsupported runner class: {agent_cfg.class_name}")
+    runner = runner_utils.build_runner(env, agent_cfg, log_dir=None)
     runner.load(resume_path)
 
     # obtain the trained policy for inference

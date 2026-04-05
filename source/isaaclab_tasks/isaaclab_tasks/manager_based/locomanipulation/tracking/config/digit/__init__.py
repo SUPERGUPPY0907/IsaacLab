@@ -17,6 +17,8 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.loco_manip_env_cfg:DigitLocoManipEnvCfg",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:DigitLocoManipPPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:DigitLocoManipBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:DigitLocoManipBELMGenPORunnerCfg",
     },
 )
 
@@ -28,5 +30,7 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.loco_manip_env_cfg:DigitLocoManipEnvCfg_PLAY",
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:DigitLocoManipPPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:DigitLocoManipBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:DigitLocoManipBELMGenPORunnerCfg",
     },
 )

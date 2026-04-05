@@ -26,8 +26,13 @@ gym.register(
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
         "genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AntGenPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AntBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AntBELMGenPORunnerCfg",
+        "genpo_pp": f"{agents.__name__}.rsl_rl_ppo_cfg:AntGenPOPlusPlusRunnerCfg",
+        "genpo++": f"{agents.__name__}.rsl_rl_ppo_cfg:AntGenPOPlusPlusRunnerCfg",
+        "genpo_pfclip": f"{agents.__name__}.rsl_rl_ppo_cfg:AntGenPOPFClipRunnerCfg",
+        "genpo_u0clip": f"{agents.__name__}.rsl_rl_ppo_cfg:AntGenPOU0ClipRunnerCfg",
         "spo": f"{agents.__name__}.rsl_rl_ppo_cfg:AntSPORunnerCfg",
         "sgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AntSGenPORunnerCfg",
-
     },
 )
