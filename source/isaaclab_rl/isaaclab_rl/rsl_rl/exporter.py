@@ -51,8 +51,12 @@ class _TorchPolicyExporter(torch.nn.Module):
     def __init__(self, policy, normalizer=None):
         super().__init__()
         self.is_recurrent = policy.is_recurrent
+        self.use_policy_inference = hasattr(policy, "act_inference_from_actor_obs") and hasattr(policy, "num_actor_obs")
         # copy policy parameters
-        if hasattr(policy, "actor"):
+        if self.use_policy_inference:
+            self.policy = copy.deepcopy(policy)
+            self.num_obs = policy.num_actor_obs
+        elif hasattr(policy, "actor"):
             self.actor = copy.deepcopy(policy.actor)
             if self.is_recurrent:
                 self.rnn = copy.deepcopy(policy.memory_a.rnn)
@@ -98,6 +102,8 @@ class _TorchPolicyExporter(torch.nn.Module):
         return self.actor(x)
 
     def forward(self, x):
+        if self.use_policy_inference:
+            return self.policy.act_inference_from_actor_obs(self.normalizer(x))
         return self.actor(self.normalizer(x))
 
     @torch.jit.export
@@ -124,8 +130,12 @@ class _OnnxPolicyExporter(torch.nn.Module):
         super().__init__()
         self.verbose = verbose
         self.is_recurrent = policy.is_recurrent
+        self.use_policy_inference = hasattr(policy, "act_inference_from_actor_obs") and hasattr(policy, "num_actor_obs")
         # copy policy parameters
-        if hasattr(policy, "actor"):
+        if self.use_policy_inference:
+            self.policy = copy.deepcopy(policy)
+            self.num_obs = policy.num_actor_obs
+        elif hasattr(policy, "actor"):
             self.actor = copy.deepcopy(policy.actor)
             if self.is_recurrent:
                 self.rnn = copy.deepcopy(policy.memory_a.rnn)
@@ -164,6 +174,8 @@ class _OnnxPolicyExporter(torch.nn.Module):
         return self.actor(x), h
 
     def forward(self, x):
+        if self.use_policy_inference:
+            return self.policy.act_inference_from_actor_obs(self.normalizer(x))
         return self.actor(self.normalizer(x))
 
     def export(self, path, filename):
@@ -202,7 +214,10 @@ class _OnnxPolicyExporter(torch.nn.Module):
             else:
                 raise NotImplementedError(f"Unsupported RNN type: {self.rnn_type}")
         else:
-            obs = torch.zeros(1, self.actor[0].in_features)
+            if self.use_policy_inference:
+                obs = torch.zeros(1, self.num_obs)
+            else:
+                obs = torch.zeros(1, self.actor[0].in_features)
             torch.onnx.export(
                 self,
                 obs,

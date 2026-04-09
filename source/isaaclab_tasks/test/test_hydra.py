@@ -129,3 +129,28 @@ def test_belm_hydra_policy_coeff_overrides():
     # clean up
     sys.argv = [sys.argv[0]]
     hydra.core.global_hydra.GlobalHydra.instance().clear()
+
+
+def test_g1_fpo_hydra_config_and_overrides():
+    """Test that the G1 Rough FPO agent entry point resolves and accepts overrides."""
+
+    sys.argv = [
+        sys.argv[0],
+        "agent.algorithm.clip_param=0.07",
+        "agent.algorithm.knn_entropy_k=3",
+        "agent.policy.sampling_steps=32",
+    ]
+
+    @hydra_task_config_test("Isaac-Velocity-Rough-G1-v0", "fpo")
+    def main(env_cfg, agent_cfg):
+        del env_cfg
+        assert agent_cfg.class_name == "OnPolicyFlowRunner"
+        assert agent_cfg.policy.class_name == "ActorCriticFPO"
+        assert agent_cfg.algorithm.class_name == "FPO"
+        assert agent_cfg.algorithm.clip_param == 0.07
+        assert agent_cfg.algorithm.knn_entropy_k == 3
+        assert agent_cfg.policy.sampling_steps == 32
+
+    main()
+    sys.argv = [sys.argv[0]]
+    hydra.core.global_hydra.GlobalHydra.instance().clear()

@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ISAACLAB_ROOT="${ISAACLAB_ROOT:-$(cd "${SCRIPT_DIR}/../../.." && pwd)}"
 RSL_RL_ROOT="${RSL_RL_ROOT:-/home/superguppy/rsl_rl}"
 
-DEFAULT_TASKS="Isaac-Velocity-Rough-H1-v0,Isaac-Velocity-Rough-G1-v0,Isaac-Tracking-LocoManip-Digit-v0,Isaac-Open-Drawer-Franka-v0,Isaac-Humanoid-v0"
+DEFAULT_TASKS="Isaac-Velocity-Rough-G1-v0,Isaac-Tracking-LocoManip-Digit-v0,Isaac-Open-Drawer-Franka-v0"
 TASKS="${TASKS:-${TASK:-${DEFAULT_TASKS}}}"
 AGENT="${AGENT:-belm_genpo}"
 SEEDS="${SEEDS:-42}"
@@ -15,12 +15,10 @@ SAVE_INTERVAL="${SAVE_INTERVAL:-}"
 EXPERIMENT_PREFIX="${EXPERIMENT_PREFIX:-belm_sweep}"
 HEADLESS="${HEADLESS:-1}"
 NUM_ENVS="${NUM_ENVS:-}"
-NPROC_PER_NODE="${NPROC_PER_NODE:-8}"
-NNODES="${NNODES:-1}"
-NODE_RANK="${NODE_RANK:-0}"
-MASTER_ADDR="${MASTER_ADDR:-127.0.0.1}"
-MASTER_PORT="${MASTER_PORT:-29500}"
-DISTRIBUTED="${DISTRIBUTED:-1}"
+GPU_IDS="${GPU_IDS:-0,1,2,3,4,5,6,7}"
+GPU_POLL_INTERVAL="${GPU_POLL_INTERVAL:-30}"
+GPU_IDLE_MAX_MEMORY_MB="${GPU_IDLE_MAX_MEMORY_MB:-10000}"
+LAUNCH_LOG_DIR="${LAUNCH_LOG_DIR:-${ISAACLAB_ROOT}/logs/belm_sweeps}"
 INSTALL_EDITABLE="${INSTALL_EDITABLE:-0}"
 A_SWEEP="${A_SWEEP:-0.0,0.05,0.25,0.5}"
 B_SWEEP="${B_SWEEP:-0.5,0.75,0.95,1.1}"
@@ -44,13 +42,12 @@ Environment overrides:
   SAVE_INTERVAL     Optional global Hydra override for agent.save_interval. Default: use each task cfg.
   EXPERIMENT_PREFIX Prefix added to generated experiment_name values. Default: belm_sweep
   HEADLESS          1 to add --headless, 0 otherwise. Default: 1
-  NUM_ENVS          Optional global --num_envs override. Interpreted per process in distributed mode.
-  DISTRIBUTED       1 to launch with torch.distributed.run, 0 for a single local process. Default: 1
-  NPROC_PER_NODE    Number of local training processes / GPUs. Default: 8
-  NNODES            Number of nodes for distributed launch. Default: 1
-  NODE_RANK         Rank of the current node in a multi-node launch. Default: 0
-  MASTER_ADDR       Master node address for multi-node launch. Default: 127.0.0.1
-  MASTER_PORT       Master node port for multi-node launch. Default: 29500
+  NUM_ENVS          Optional global --num_envs override. Default: use each task cfg.
+  GPU_IDS           Comma-separated GPU ids to schedule on. Default: auto-detect all visible GPUs.
+  GPU_POLL_INTERVAL Seconds between idle-GPU checks. Default: 30
+  GPU_IDLE_MAX_MEMORY_MB
+                    Consider a GPU idle if memory.used <= this threshold. Default: 1000
+  LAUNCH_LOG_DIR    Directory for per-experiment launcher logs. Default: logs/belm_sweeps
   INSTALL_EDITABLE  1 to install local rsl_rl before runs, 0 otherwise. Default: 0
   A_SWEEP           Comma-separated A values. Default: 0.0,0.05,0.25,0.5
   B_SWEEP           Comma-separated B values. Default: 0.5,0.75,0.95,1.1
@@ -59,8 +56,8 @@ Environment overrides:
 Examples:
   bash ${0##*/}
   TASKS=Isaac-Velocity-Rough-H1-v0,Isaac-Humanoid-v0 SEEDS=1,2 bash ${0##*/}
-  NUM_ENVS=512 DISTRIBUTED=1 NPROC_PER_NODE=8 bash ${0##*/}
-  DISTRIBUTED=0 NUM_ENVS=4096 bash ${0##*/}
+  GPU_IDS=0,1,2,3,4,5,6,7 NUM_ENVS=512 bash ${0##*/}
+  MAX_ITERATIONS=800 SAVE_INTERVAL=100 NUM_ENVS=4096 bash ${0##*/}
 EOF
 }
 
@@ -150,31 +147,140 @@ build_experiment_name() {
     echo "${prefix}${task_label}_${variant}_seed${seed}"
 }
 
-print_num_envs_summary() {
-    if [[ -z "${NUM_ENVS}" ]]; then
-        echo "Num envs override: <task cfg default>"
-        return
+declare -a gpu_ids
+declare -a running_pids=()
+declare -A pid_to_gpu=()
+declare -A pid_to_experiment=()
+declare -i failed_jobs=0
+
+initialize_gpu_ids() {
+    if ! command -v nvidia-smi &> /dev/null; then
+        echo "nvidia-smi is required for GPU scheduling but was not found." >&2
+        exit 1
     fi
 
-    if [[ "${DISTRIBUTED}" == "1" ]]; then
-        local total_envs=$((NUM_ENVS * NPROC_PER_NODE * NNODES))
-        echo "Num envs override: ${NUM_ENVS} per process"
-        echo "Total num envs: ${total_envs} (${NNODES} node(s) x ${NPROC_PER_NODE} proc(s)/node x ${NUM_ENVS} envs/proc)"
+    if [[ -n "${GPU_IDS}" ]]; then
+        csv_to_array "${GPU_IDS}" gpu_ids
     else
-        echo "Num envs override: ${NUM_ENVS}"
+        mapfile -t gpu_ids < <(nvidia-smi --query-gpu=index --format=csv,noheader,nounits)
     fi
+
+    if [[ ${#gpu_ids[@]} -eq 0 ]]; then
+        echo "No GPUs available for scheduling." >&2
+        exit 1
+    fi
+
+    local idx
+    for idx in "${!gpu_ids[@]}"; do
+        gpu_ids[$idx]="${gpu_ids[$idx]// /}"
+    done
 }
 
-run_once() {
-    local task="$1"
-    local experiment_name="$2"
-    local wandb_project="$3"
-    local label="$4"
-    shift 4
+terminate_running_jobs() {
+    local pid
+    for pid in "${running_pids[@]}"; do
+        if kill -0 "${pid}" 2>/dev/null; then
+            kill "${pid}" 2>/dev/null || true
+        fi
+    done
+}
+
+reap_finished_jobs() {
+    local -a active_pids=()
+    local pid status gpu_id experiment_name
+
+    for pid in "${running_pids[@]}"; do
+        if kill -0 "${pid}" 2>/dev/null; then
+            active_pids+=("${pid}")
+            continue
+        fi
+
+        if wait "${pid}"; then
+            status=0
+        else
+            status=$?
+        fi
+
+        gpu_id="${pid_to_gpu[$pid]}"
+        experiment_name="${pid_to_experiment[$pid]}"
+        echo "[INFO] Experiment '${experiment_name}' on GPU ${gpu_id} finished with status ${status}"
+        if [[ ${status} -ne 0 ]]; then
+            failed_jobs+=1
+        fi
+
+        unset 'pid_to_gpu[$pid]'
+        unset 'pid_to_experiment[$pid]'
+    done
+
+    running_pids=("${active_pids[@]}")
+}
+
+gpu_reserved_by_launcher() {
+    local gpu_id="$1"
+    local pid
+
+    for pid in "${running_pids[@]}"; do
+        if [[ "${pid_to_gpu[$pid]:-}" == "${gpu_id}" ]] && kill -0 "${pid}" 2>/dev/null; then
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+gpu_is_idle() {
+    local gpu_id="$1"
+    local memory_used
+
+    if gpu_reserved_by_launcher "${gpu_id}"; then
+        return 1
+    fi
+
+    memory_used="$(nvidia-smi --id="${gpu_id}" --query-gpu=memory.used --format=csv,noheader,nounits 2>/dev/null | head -n 1)"
+    memory_used="${memory_used// /}"
+
+    if [[ -z "${memory_used}" ]]; then
+        return 1
+    fi
+
+    [[ "${memory_used}" -le "${GPU_IDLE_MAX_MEMORY_MB}" ]]
+}
+
+find_idle_gpu() {
+    local gpu_id
+    for gpu_id in "${gpu_ids[@]}"; do
+        if gpu_is_idle "${gpu_id}"; then
+            echo "${gpu_id}"
+            return 0
+        fi
+    done
+    return 1
+}
+
+wait_for_idle_gpu() {
+    local gpu_id
+    while true; do
+        reap_finished_jobs
+        if gpu_id="$(find_idle_gpu)"; then
+            echo "${gpu_id}"
+            return 0
+        fi
+        sleep "${GPU_POLL_INTERVAL}"
+    done
+}
+
+launch_run() {
+    local gpu_id="$1"
+    local task="$2"
+    local experiment_name="$3"
+    local wandb_project="$4"
+    local label="$5"
+    shift 5
 
     local -a run_args=(
         --task "${task}"
         --agent "${AGENT}"
+        --device "cuda:${gpu_id}"
     )
 
     if [[ -n "${MAX_ITERATIONS}" ]]; then
@@ -183,10 +289,6 @@ run_once() {
 
     if [[ "${HEADLESS}" == "1" ]]; then
         run_args+=(--headless)
-    fi
-
-    if [[ "${DISTRIBUTED}" == "1" ]]; then
-        run_args+=(--distributed)
     fi
 
     if [[ -n "${NUM_ENVS}" ]]; then
@@ -205,39 +307,48 @@ run_once() {
     fi
 
     echo
-    echo "==== Running ${task} :: ${label} ===="
+    echo "==== Launching ${task} :: ${label} on GPU ${gpu_id} ===="
     echo "Experiment name: ${experiment_name}"
     echo "wandb_project: ${wandb_project}"
-    if [[ "${DISTRIBUTED}" == "1" ]]; then
-        local total_envs="<task cfg default>"
-        if [[ -n "${NUM_ENVS}" ]]; then
-            total_envs=$((NUM_ENVS * NPROC_PER_NODE * NNODES))
-        fi
-        echo "Launch mode: distributed (${NNODES} node(s), ${NPROC_PER_NODE} proc(s)/node, total envs: ${total_envs})"
-    else
-        echo "Launch mode: single process"
-    fi
     printf 'Overrides:'
     for arg in "${hydra_args[@]}"; do
         printf ' %q' "${arg}"
     done
     printf '\n'
 
+    mkdir -p "${LAUNCH_LOG_DIR}"
+    local log_file="${LAUNCH_LOG_DIR}/${experiment_name}.log"
+
     (
         cd "${ISAACLAB_ROOT}"
-        if [[ "${DISTRIBUTED}" == "1" ]]; then
-            ./isaaclab.sh -p -m torch.distributed.run \
-                --nnodes="${NNODES}" \
-                --nproc_per_node="${NPROC_PER_NODE}" \
-                --node_rank="${NODE_RANK}" \
-                --master_addr="${MASTER_ADDR}" \
-                --master_port="${MASTER_PORT}" \
-                "${TRAIN_SCRIPT}" "${run_args[@]}" "${hydra_args[@]}"
-        else
-            ./isaaclab.sh -p "${TRAIN_SCRIPT}" "${run_args[@]}" "${hydra_args[@]}"
-        fi
-    )
+        ./isaaclab.sh -p "${TRAIN_SCRIPT}" "${run_args[@]}" "${hydra_args[@]}"
+    ) > "${log_file}" 2>&1 &
+
+    local pid=$!
+    running_pids+=("${pid}")
+    pid_to_gpu["${pid}"]="${gpu_id}"
+    pid_to_experiment["${pid}"]="${experiment_name}"
+
+    echo "[INFO] Started '${experiment_name}' on GPU ${gpu_id} with pid ${pid}"
+    echo "[INFO] Launcher log: ${log_file}"
 }
+
+schedule_run() {
+    local gpu_id
+    gpu_id="$(wait_for_idle_gpu)"
+    launch_run "${gpu_id}" "$@"
+}
+
+wait_for_all_jobs() {
+    while [[ ${#running_pids[@]} -gt 0 ]]; do
+        reap_finished_jobs
+        if [[ ${#running_pids[@]} -gt 0 ]]; then
+            sleep "${GPU_POLL_INTERVAL}"
+        fi
+    done
+}
+
+trap 'terminate_running_jobs; exit 130' INT TERM
 
 echo "IsaacLab root: ${ISAACLAB_ROOT}"
 echo "rsl_rl root: ${RSL_RL_ROOT}"
@@ -247,12 +358,11 @@ echo "Seeds: ${SEEDS}"
 echo "Max iterations override: ${MAX_ITERATIONS:-<task cfg default>}"
 echo "Save interval override: ${SAVE_INTERVAL:-<task cfg default>}"
 echo "Experiment prefix: ${EXPERIMENT_PREFIX}"
-echo "Distributed launch: ${DISTRIBUTED}"
-if [[ "${DISTRIBUTED}" == "1" ]]; then
-    echo "Distributed workers: ${NNODES} node(s) x ${NPROC_PER_NODE} proc(s)/node"
-    echo "Rendezvous: ${MASTER_ADDR}:${MASTER_PORT} (node rank ${NODE_RANK})"
-fi
-print_num_envs_summary
+echo "Num envs override: ${NUM_ENVS:-<task cfg default>}"
+echo "GPU ids override: ${GPU_IDS:-<auto-detect>}"
+echo "GPU poll interval: ${GPU_POLL_INTERVAL}s"
+echo "GPU idle memory threshold: ${GPU_IDLE_MAX_MEMORY_MB} MB"
+echo "Launcher log dir: ${LAUNCH_LOG_DIR}"
 echo "A sweep: ${A_SWEEP}"
 echo "B sweep: ${B_SWEEP}"
 echo "eps sweep: ${EPS_SWEEP}"
@@ -277,6 +387,9 @@ csv_to_array "${SEEDS}" seeds
 csv_to_array "${A_SWEEP}" a_values
 csv_to_array "${B_SWEEP}" b_values
 csv_to_array "${EPS_SWEEP}" eps_values
+initialize_gpu_ids
+
+echo "Scheduler GPUs: ${gpu_ids[*]}"
 
 for task in "${tasks[@]}"; do
     task="${task// /}"
@@ -289,7 +402,7 @@ for task in "${tasks[@]}"; do
     for seed in "${seeds[@]}"; do
         seed="${seed// /}"
         baseline_variant="baseline_a$(sanitize_value "0.05")_b$(sanitize_value "0.95")_eps$(sanitize_value "1.0")"
-        run_once "${task}" "$(build_experiment_name "${task_label}" "${baseline_variant}" "${seed}")" "${wandb_project}" "${baseline_variant}" \
+        schedule_run "${task}" "$(build_experiment_name "${task_label}" "${baseline_variant}" "${seed}")" "${wandb_project}" "${baseline_variant}" \
             "agent.seed=${seed}" \
             "agent.policy.lag_coeff=null" \
             "agent.policy.a_coeff=0.05" \
@@ -299,7 +412,7 @@ for task in "${tasks[@]}"; do
         for a_value in "${a_values[@]}"; do
             a_value="${a_value// /}"
             a_variant="a_sweep_a$(sanitize_value "${a_value}")_b$(sanitize_value "0.95")_eps$(sanitize_value "1.0")"
-            run_once "${task}" "$(build_experiment_name "${task_label}" "${a_variant}" "${seed}")" "${wandb_project}" "${a_variant}" \
+            schedule_run "${task}" "$(build_experiment_name "${task_label}" "${a_variant}" "${seed}")" "${wandb_project}" "${a_variant}" \
                 "agent.seed=${seed}" \
                 "agent.policy.lag_coeff=null" \
                 "agent.policy.a_coeff=${a_value}" \
@@ -310,7 +423,7 @@ for task in "${tasks[@]}"; do
         for b_value in "${b_values[@]}"; do
             b_value="${b_value// /}"
             untied_b_variant="b_sweep_untied_a$(sanitize_value "0.05")_b$(sanitize_value "${b_value}")_eps$(sanitize_value "1.0")"
-            run_once "${task}" "$(build_experiment_name "${task_label}" "${untied_b_variant}" "${seed}")" "${wandb_project}" "${untied_b_variant}" \
+            schedule_run "${task}" "$(build_experiment_name "${task_label}" "${untied_b_variant}" "${seed}")" "${wandb_project}" "${untied_b_variant}" \
                 "agent.seed=${seed}" \
                 "agent.policy.lag_coeff=null" \
                 "agent.policy.a_coeff=0.05" \
@@ -321,7 +434,7 @@ for task in "${tasks[@]}"; do
         for eps_value in "${eps_values[@]}"; do
             eps_value="${eps_value// /}"
             eps_variant="eps_sweep_a$(sanitize_value "0.05")_b$(sanitize_value "0.95")_eps$(sanitize_value "${eps_value}")"
-            run_once "${task}" "$(build_experiment_name "${task_label}" "${eps_variant}" "${seed}")" "${wandb_project}" "${eps_variant}" \
+            schedule_run "${task}" "$(build_experiment_name "${task_label}" "${eps_variant}" "${seed}")" "${wandb_project}" "${eps_variant}" \
                 "agent.seed=${seed}" \
                 "agent.policy.lag_coeff=null" \
                 "agent.policy.a_coeff=0.05" \
@@ -332,7 +445,7 @@ for task in "${tasks[@]}"; do
         for b_value in "${b_values[@]}"; do
             b_value="${b_value// /}"
             tied_b_variant="b_sweep_tied_lag$(sanitize_value "${b_value}")"
-            run_once "${task}" "$(build_experiment_name "${task_label}" "${tied_b_variant}" "${seed}")" "${wandb_project}" "${tied_b_variant}" \
+            schedule_run "${task}" "$(build_experiment_name "${task_label}" "${tied_b_variant}" "${seed}")" "${wandb_project}" "${tied_b_variant}" \
                 "agent.seed=${seed}" \
                 "agent.policy.a_coeff=null" \
                 "agent.policy.b_coeff=null" \
@@ -342,5 +455,11 @@ for task in "${tasks[@]}"; do
     done
 done
 
+wait_for_all_jobs
+
 echo
+if [[ ${failed_jobs} -ne 0 ]]; then
+    echo "All BELM sweep groups finished, but ${failed_jobs} job(s) failed." >&2
+    exit 1
+fi
 echo "All BELM sweep groups finished."

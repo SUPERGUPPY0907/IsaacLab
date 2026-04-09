@@ -7,6 +7,8 @@ from isaaclab.utils import configclass
 
 from isaaclab_rl.rsl_rl import (
     RslRlBelmGenpoActorCriticCfg,
+    RslRlFpoActorCriticCfg,
+    RslRlFpoAlgorithmCfg,
     RslRlGenpoActorCriticCfg,
     RslRlGenpoAlgorithmCfg,
     RslRlGenpoPlusPlusAlgorithmCfg,
@@ -71,7 +73,7 @@ class G1RoughGenPORunnerCfg(RslRlOnPolicyRunnerCfg):
         use_clipped_value_loss=True,
         clip_param=0.2,
         entropy_coef=0.0,
-        num_learning_epochs=5,
+        num_learning_epochs=32,
         num_mini_batches=4,
         learning_rate=1e-3,
         schedule="adaptive",
@@ -110,7 +112,7 @@ class G1RoughGenPOPlusPlusRunnerCfg(RslRlOnPolicyRunnerCfg):
         use_clipped_value_loss=True,
         clip_param=0.2,
         entropy_coef=0.0,
-        num_learning_epochs=5,
+        num_learning_epochs=32,
         num_mini_batches=4,
         learning_rate=1e-3,
         schedule="adaptive",
@@ -130,6 +132,56 @@ class G1RoughGenPOPlusPlusRunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
+class G1RoughFPORunnerCfg(RslRlOnPolicyRunnerCfg):
+    class_name = "OnPolicyFlowRunner"
+    num_steps_per_env = 24
+    max_iterations = 3000
+    save_interval = 3000
+    clip_actions = 2.0
+    experiment_name = "g1_rough_fpo"
+    wandb_project = "belm_g1_rough"
+    policy = RslRlFpoActorCriticCfg(
+        init_noise_std=1.0,
+        actor_obs_normalization=True,
+        critic_obs_normalization=True,
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[512, 256, 128],
+        activation="elu",
+        timestep_embed_dim=8,
+        sampling_steps=64,
+        cfm_loss_reduction="sqrt",
+        action_perturb_std=0.02,
+    )
+    algorithm = RslRlFpoAlgorithmCfg(
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.05,
+        entropy_coef=0.0,
+        num_learning_epochs=32,
+        num_mini_batches=4,
+        learning_rate=1e-4,
+        weight_decay=1e-4,
+        schedule="fixed",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=1e-4,
+        max_grad_norm=1.0,
+        n_samples_per_action=32,
+        trust_region_mode="aspo",
+        advantage_clamp=(100.0, 100.0),
+        cfm_diff_clamp_max=10.0,
+        cfm_loss_clamp=20.0,
+        cfm_loss_clamp_negative_advantages=True,
+        cfm_loss_clamp_negative_advantages_max=20.0,
+        knn_entropy_coef=0.0,
+        knn_entropy_k=1,
+        storage_action_noise_std=0.0,
+        ema_decay=0.95,
+        ema_warmup_steps=500,
+    )
+
+
+@configclass
 class G1RoughSPORunnerCfg(G1RoughPPORunnerCfg):
     experiment_name = "g1_rough_spo"
     algorithm = G1RoughPPORunnerCfg().algorithm.replace(class_name="SPO")
@@ -141,7 +193,7 @@ class G1RoughBELMGenPORunnerCfg(G1RoughGenPORunnerCfg):
     wandb_project = "g1_rough_belmgenpo"
     policy = RslRlBelmGenpoActorCriticCfg(
         std=1.0,
-        flow_num_steps=5,
+        flow_num_steps=10,
         mix_para=0.95,
         lag_coeff=0.97,
         time_dim=32,

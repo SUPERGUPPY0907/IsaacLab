@@ -107,6 +107,41 @@ class RslRlBelmGenpoActorCriticCfg(RslRlGenpoActorCriticCfg):
 
 
 @configclass
+class RslRlFpoActorCriticCfg(RslRlPpoActorCriticCfg):
+    """Configuration for the FPO actor-critic networks."""
+
+    class_name: str = "ActorCriticFPO"
+    """The policy class name. Default is ActorCriticFPO."""
+
+    actor_scale: float = 1.0
+    """Scaling factor applied to actor outputs."""
+
+    actor_mlp_output_scale: float = 1.0
+    """Scaling factor applied to actor MLP outputs."""
+
+    actor_final_layer_weight_scale: float | None = None
+    """Optional scaling factor applied to the actor's final layer at initialization."""
+
+    timestep_embed_dim: int = 8
+    """Dimension of the timestep embedding used by the flow actor."""
+
+    training_sampling_steps: int | None = None
+    """Optional training-time override for the number of sampling steps."""
+
+    cfm_loss_t_inverse_cdf_beta: float = 1.0
+    """Beta parameter used for inverse-CDF timestep sampling in the CFM loss."""
+
+    sampling_steps: int = 64
+    """Number of denoising steps used by the flow actor during inference."""
+
+    cfm_loss_reduction: Literal["mean", "sum", "sqrt"] = "sqrt"
+    """Reduction applied to the per-dimension CFM loss."""
+
+    action_perturb_std: float = 0.02
+    """Training-time Gaussian perturbation applied to sampled actions."""
+
+
+@configclass
 class RslRlLeapfrogActorCriticCfg(RslRlPpoActorCriticCfg):
     """Configuration for the leapfrog-flow actor-critic networks."""
 
@@ -273,6 +308,95 @@ class RslRlGenpoPlusPlusAlgorithmCfg(RslRlGenpoAlgorithmCfg):
 
     lambda_mirror: float = 0.0
     """The mirror consistency regularization weight."""
+
+
+@configclass
+class RslRlFpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
+    """Configuration for the FPO algorithm."""
+
+    class_name: str = "FPO"
+    """The algorithm class name. Default is FPO."""
+
+    num_learning_epochs: int = 16
+    """The number of learning epochs per update."""
+
+    num_mini_batches: int = 4
+    """The number of mini-batches per update."""
+
+    learning_rate: float = 1e-4
+    """The learning rate for the policy."""
+
+    weight_decay: float = 1e-4
+    """Weight decay coefficient used by AdamW."""
+
+    adam_betas: tuple[float, float] = (0.9, 0.999)
+    """Adam/AdamW beta coefficients."""
+
+    schedule: str = "fixed"
+    """The learning-rate schedule."""
+
+    gamma: float = 0.99
+    """The discount factor."""
+
+    lam: float = 0.95
+    """The lambda parameter for Generalized Advantage Estimation (GAE)."""
+
+    entropy_coef: float = 0.0
+    """Unused compatibility field retained for config parity with PPO."""
+
+    desired_kl: float = 1e-4
+    """Desired KL divergence used when schedule is adaptive."""
+
+    max_grad_norm: float = 1.0
+    """The maximum gradient norm."""
+
+    value_loss_coef: float = 1.0
+    """The coefficient for the value loss."""
+
+    use_clipped_value_loss: bool = False
+    """Whether to use clipped value loss."""
+
+    clip_param: float = 0.05
+    """The policy clipping parameter."""
+
+    normalize_advantage: bool = True
+    """Whether to normalize advantages across the full rollout."""
+
+    n_samples_per_action: int = 16
+    """Number of CFM samples evaluated per action."""
+
+    cfm_diff_clamp_max: float = 10.0
+    """Upper clamp bound for the CFM log-ratio difference."""
+
+    cfm_loss_clamp: float = 20.0
+    """Upper clamp bound applied to both old and current CFM losses."""
+
+    cfm_loss_clamp_negative_advantages: bool = True
+    """Whether to apply an additional CFM clamp on negative-advantage samples."""
+
+    cfm_loss_clamp_negative_advantages_max: float = 20.0
+    """Clamp bound for negative-advantage CFM losses."""
+
+    storage_action_noise_std: float = 0.0
+    """Gaussian noise added to stored rollout actions."""
+
+    trust_region_mode: Literal["ppo", "spo", "aspo"] = "aspo"
+    """Trust-region mode used by the FPO surrogate objective."""
+
+    advantage_clamp: tuple[float, float] = (100.0, 100.0)
+    """Symmetric clamp bounds for positive and negative advantages."""
+
+    knn_entropy_coef: float = 0.0
+    """Coefficient for the kNN entropy bonus."""
+
+    knn_entropy_k: int = 1
+    """Number of nearest neighbors used by the kNN entropy bonus."""
+
+    ema_decay: float = 0.95
+    """Exponential moving-average decay for the actor parameters."""
+
+    ema_warmup_steps: int = 500
+    """Number of optimizer updates before EMA tracking starts."""
 
 
 @configclass
