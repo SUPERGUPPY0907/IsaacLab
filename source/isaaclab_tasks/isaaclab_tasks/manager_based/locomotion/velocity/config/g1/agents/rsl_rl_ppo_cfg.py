@@ -205,7 +205,11 @@ class G1RoughBELMGenPORunnerCfg(G1RoughGenPORunnerCfg):
         critic_hidden_dims=[512, 256, 128],
         activation="mish",
     )
-    algorithm = G1RoughGenPORunnerCfg().algorithm.replace(class_name="BELMGenPO")
+    algorithm = G1RoughGenPORunnerCfg().algorithm.replace(
+        class_name="BELMGenPO",
+        ema_decay=0.95,
+        ema_warmup_steps=500,
+    )
 
 
 @configclass

@@ -258,6 +258,18 @@ class RslRlGenpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
 
     use_entropy: bool | None = None
 
+    ema_decay: float = 0.0
+    """Exponential moving-average decay for actor parameters. Set <= 0 to disable EMA."""
+
+    ema_warmup_steps: int = 500
+    """Number of policy updates before EMA tracking starts."""
+
+    trust_region_mode: Literal["ppo", "spo", "aspo"] = "ppo"
+    """Trust-region mode used by the GenPO/BELM surrogate objective."""
+
+    storage_latent_noise_std: float = 0.0
+    """Gaussian std of latent noise applied only to rollout storage actions."""
+
 
 @configclass
 class RslRlGenpoPushforwardClipAlgorithmCfg(RslRlGenpoAlgorithmCfg):
