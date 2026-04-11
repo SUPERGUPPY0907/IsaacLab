@@ -24,6 +24,7 @@ class G1RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 3000
     save_interval = 3000
     experiment_name = "g1_rough"
+    wandb_project = "g1_rough_ppo"
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_obs_normalization=False,
@@ -139,7 +140,7 @@ class G1RoughFPORunnerCfg(RslRlOnPolicyRunnerCfg):
     save_interval = 3000
     clip_actions = 2.0
     experiment_name = "g1_rough_fpo"
-    wandb_project = "belm_g1_rough"
+    wandb_project = "g1_rough_fpo"
     policy = RslRlFpoActorCriticCfg(
         init_noise_std=1.0,
         actor_obs_normalization=True,
@@ -225,6 +226,7 @@ class G1FlatPPORunnerCfg(G1RoughPPORunnerCfg):
 
         self.max_iterations = 1500
         self.experiment_name = "g1_flat"
+        self.wandb_project = "g1_flat_ppo"
         self.policy.actor_hidden_dims = [256, 128, 128]
         self.policy.critic_hidden_dims = [256, 128, 128]
 
@@ -236,3 +238,4 @@ class G1BalancePPORunnerCfg(G1RoughPPORunnerCfg):
 
         self.max_iterations = 5000
         self.experiment_name = "g1_balance"
+        self.wandb_project = "g1_balance_ppo"

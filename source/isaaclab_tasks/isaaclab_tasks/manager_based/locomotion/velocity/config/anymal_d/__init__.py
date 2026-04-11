@@ -52,6 +52,7 @@ gym.register(
             f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughPPORunnerWithSymmetryCfg"
         ),
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_rough_ppo_cfg.yaml",
+        "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughFPORunnerCfg",
     },
 )
 
@@ -66,5 +67,6 @@ gym.register(
             f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughPPORunnerWithSymmetryCfg"
         ),
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_rough_ppo_cfg.yaml",
+        "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughFPORunnerCfg",
     },
 )

@@ -5,7 +5,14 @@
 
 from isaaclab.utils import configclass
 
-from isaaclab_rl.rsl_rl import RslRlOnPolicyRunnerCfg, RslRlPpoActorCriticCfg, RslRlPpoAlgorithmCfg, RslRlSymmetryCfg
+from isaaclab_rl.rsl_rl import (
+    RslRlFpoActorCriticCfg,
+    RslRlFpoAlgorithmCfg,
+    RslRlOnPolicyRunnerCfg,
+    RslRlPpoActorCriticCfg,
+    RslRlPpoAlgorithmCfg,
+    RslRlSymmetryCfg,
+)
 
 from isaaclab_tasks.manager_based.locomotion.velocity.mdp.symmetry import anymal
 
@@ -16,6 +23,7 @@ class AnymalDRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     max_iterations = 1500
     save_interval = 50
     experiment_name = "anymal_d_rough"
+    wandb_project = "anymal_d_rough_ppo"
     policy = RslRlPpoActorCriticCfg(
         init_noise_std=1.0,
         actor_obs_normalization=False,
@@ -41,12 +49,53 @@ class AnymalDRoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
 
 
 @configclass
+class AnymalDRoughFPORunnerCfg(RslRlOnPolicyRunnerCfg):
+    class_name = "OnPolicyFlowRunner"
+    num_steps_per_env = 24
+    max_iterations = 1500
+    save_interval = 50
+    experiment_name = "anymal_d_rough_fpo"
+    wandb_project = "anymal_d_rough_fpo"
+    policy = RslRlFpoActorCriticCfg(
+        init_noise_std=1.0,
+        actor_obs_normalization=False,
+        critic_obs_normalization=False,
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[512, 256, 128],
+        activation="elu",
+        timestep_embed_dim=8,
+        sampling_steps=64,
+        cfm_loss_reduction="sqrt",
+        action_perturb_std=0.02,
+    )
+    algorithm = RslRlFpoAlgorithmCfg(
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.0,
+        num_learning_epochs=32,
+        num_mini_batches=4,
+        learning_rate=1.0e-3,
+        weight_decay=1.0e-4,
+        schedule="fixed",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=1.0e-4,
+        max_grad_norm=1.0,
+        trust_region_mode="aspo",
+        ema_decay=0.95,
+        ema_warmup_steps=500,
+    )
+
+
+@configclass
 class AnymalDFlatPPORunnerCfg(AnymalDRoughPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
 
         self.max_iterations = 300
         self.experiment_name = "anymal_d_flat"
+        self.wandb_project = "anymal_d_flat_ppo"
         self.policy.actor_hidden_dims = [128, 128, 128]
         self.policy.critic_hidden_dims = [128, 128, 128]
 
