@@ -24,6 +24,9 @@ gym.register(
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
         "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubeFPORunnerCfg",
+        "genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubeGenPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubeBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubeBELMGenPORunnerCfg",
     },
     disable_env_checker=True,
 )
@@ -38,6 +41,9 @@ gym.register(
         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
         "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubeFPORunnerCfg",
+        "genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubeGenPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubeBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:LiftCubeBELMGenPORunnerCfg",
     },
     disable_env_checker=True,
 )

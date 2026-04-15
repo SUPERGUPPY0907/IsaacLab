@@ -42,6 +42,9 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_rough_ppo_cfg.yaml",
         "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughFPORunnerCfg",
+        "genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughGenPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughBELMGenPORunnerCfg",
     },
 )
 
@@ -54,5 +57,8 @@ gym.register(
         "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughPPORunnerCfg",
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_rough_ppo_cfg.yaml",
         "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughFPORunnerCfg",
+        "genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughGenPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:UnitreeGo2RoughBELMGenPORunnerCfg",
     },
 )

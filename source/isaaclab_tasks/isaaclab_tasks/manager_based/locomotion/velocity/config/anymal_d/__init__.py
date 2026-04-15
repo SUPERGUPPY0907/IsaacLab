@@ -53,6 +53,9 @@ gym.register(
         ),
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_rough_ppo_cfg.yaml",
         "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughFPORunnerCfg",
+        "genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughGenPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughBELMGenPORunnerCfg",
     },
 )
 
@@ -68,5 +71,8 @@ gym.register(
         ),
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_rough_ppo_cfg.yaml",
         "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughFPORunnerCfg",
+        "genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughGenPORunnerCfg",
+        "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughBELMGenPORunnerCfg",
+        "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:AnymalDRoughBELMGenPORunnerCfg",
     },
 )
