@@ -7,7 +7,7 @@ ISAACLAB_ROOT_DEFAULT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 ISAACLAB_ROOT="${ISAACLAB_ROOT:-${ISAACLAB_ROOT_DEFAULT}}"
 RSL_RL_ROOT="${RSL_RL_ROOT:-/home/superguppy/rsl_rl}"
 
-DEFAULT_TASKS="Isaac-Humanoid-v0"
+DEFAULT_TASKS="Isaac-Ant-v0,Isaac-Humanoid-v0,Isaac-Lift-Cube-Franka-v0,Isaac-Open-Drawer-Franka-v0,Isaac-Velocity-Rough-Anymal-D-v0,Isaac-Velocity-Rough-Unitree-Go2-v0,Isaac-Velocity-Rough-G1-v0,Isaac-Tracking-LocoManip-Digit-v0"
 TASKS="${TASKS:-${TASK:-${DEFAULT_TASKS}}}"
 AGENT="${AGENT:-belm_genpo}"
 SEEDS="${SEEDS:-42}"
@@ -67,7 +67,7 @@ Refinement defaults around lag_coeff=0.75:
 
 Examples:
   bash ${0##*/}
-  TASKS=Isaac-Humanoid-v0 SEEDS=1,2 GPU_IDS=0,1 bash ${0##*/}
+  TASKS=Isaac-Ant-v0,Isaac-Humanoid-v0 SEEDS=1,2 GPU_IDS=0,1 bash ${0##*/}
   A_SWEEP=0.20,0.25,0.30 B_SWEEP=0.70,0.75,0.80 EPS_SWEEP=0.75,1.0,1.25 bash ${0##*/}
 EOF
 }
@@ -110,6 +110,10 @@ same_value() {
 task_slug() {
     local task="$1"
     case "${task}" in
+        Isaac-Ant-v0) echo "ant" ;;
+        Isaac-Lift-Cube-Franka-v0) echo "franka_lift_cube" ;;
+        Isaac-Velocity-Rough-Anymal-D-v0) echo "anymal_d_rough" ;;
+        Isaac-Velocity-Rough-Unitree-Go2-v0) echo "unitree_go2_rough" ;;
         Isaac-Velocity-Rough-H1-v0) echo "h1_rough" ;;
         Isaac-Velocity-Rough-G1-v0) echo "g1_rough" ;;
         Isaac-Tracking-LocoManip-Digit-v0) echo "digit_loco_manip" ;;
@@ -125,6 +129,10 @@ task_slug() {
 task_wandb_project() {
     local task="$1"
     case "${task}" in
+        Isaac-Ant-v0) echo "belm_ant" ;;
+        Isaac-Lift-Cube-Franka-v0) echo "belm_franka_lift_cube" ;;
+        Isaac-Velocity-Rough-Anymal-D-v0) echo "belm_anymal_d_rough" ;;
+        Isaac-Velocity-Rough-Unitree-Go2-v0) echo "belm_unitree_go2_rough" ;;
         Isaac-Velocity-Rough-H1-v0) echo "belm_h1_rough" ;;
         Isaac-Velocity-Rough-G1-v0) echo "belm_g1_rough" ;;
         Isaac-Tracking-LocoManip-Digit-v0) echo "belm_digit_loco_manip" ;;
