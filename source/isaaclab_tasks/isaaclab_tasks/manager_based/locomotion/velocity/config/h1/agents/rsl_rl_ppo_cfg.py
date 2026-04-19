@@ -106,6 +106,9 @@ class H1RoughBELMGenPORunnerCfg(H1RoughGenPORunnerCfg):
         flow_num_steps=5,
         mix_para=0.95,
         lag_coeff=0.97,
+        a_coeff=0.03,
+        b_coeff=0.97,
+        eps_coeff=1.0,
         time_dim=32,
         time_hidden_dims=[64, 64],
         init_noise_std=1.0,
@@ -116,4 +119,3 @@ class H1RoughBELMGenPORunnerCfg(H1RoughGenPORunnerCfg):
         activation="elu",
     )
     algorithm = H1RoughGenPORunnerCfg().algorithm.replace(class_name="BELMGenPO")
-
