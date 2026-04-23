@@ -7,7 +7,7 @@ ISAACLAB_ROOT_DEFAULT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 ISAACLAB_ROOT="${ISAACLAB_ROOT:-${ISAACLAB_ROOT_DEFAULT}}"
 RSL_RL_ROOT="${RSL_RL_ROOT:-/home/superguppy/rsl_rl}"
 
-DEFAULT_TASKS="Isaac-Ant-v0,Isaac-Humanoid-v0,Isaac-Lift-Cube-Franka-v0,Isaac-Open-Drawer-Franka-v0,Isaac-Velocity-Rough-Anymal-D-v0,Isaac-Velocity-Rough-Unitree-Go2-v0,Isaac-Velocity-Rough-G1-v0,Isaac-Tracking-LocoManip-Digit-v0"
+DEFAULT_TASKS="Isaac-Ant-v0,Isaac-Humanoid-v0,Isaac-Lift-Cube-Franka-v0,Isaac-Open-Drawer-Franka-v0,Isaac-Velocity-Rough-Anymal-D-v0,Isaac-Velocity-Rough-Unitree-Go2-v0,Isaac-Velocity-Rough-H1-v0,Isaac-Velocity-Rough-G1-v0,Isaac-Tracking-LocoManip-Digit-v0"
 TASKS="${TASKS:-${TASK:-${DEFAULT_TASKS}}}"
 ALGORITHMS="${ALGORITHMS:-ppo,fpo}"
 SEEDS="${SEEDS:-42,43,44,45,46,47,48,49,50,51}"
@@ -97,6 +97,7 @@ task_slug() {
         Isaac-Open-Drawer-Franka-v0) echo "franka_open_drawer" ;;
         Isaac-Velocity-Rough-Anymal-D-v0) echo "anymal_d_rough" ;;
         Isaac-Velocity-Rough-Unitree-Go2-v0) echo "unitree_go2_rough" ;;
+        Isaac-Velocity-Rough-H1-v0) echo "h1_rough" ;;
         Isaac-Velocity-Rough-G1-v0) echo "g1_rough" ;;
         Isaac-Tracking-LocoManip-Digit-v0) echo "digit_loco_manip" ;;
         *)

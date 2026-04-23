@@ -154,3 +154,28 @@ def test_g1_fpo_hydra_config_and_overrides():
     main()
     sys.argv = [sys.argv[0]]
     hydra.core.global_hydra.GlobalHydra.instance().clear()
+
+
+def test_h1_fpo_hydra_config_and_overrides():
+    """Test that the H1 Rough FPO agent entry point resolves and accepts overrides."""
+
+    sys.argv = [
+        sys.argv[0],
+        "agent.algorithm.clip_param=0.15",
+        "agent.algorithm.ema_decay=0.9",
+        "agent.policy.sampling_steps=32",
+    ]
+
+    @hydra_task_config_test("Isaac-Velocity-Rough-H1-v0", "fpo")
+    def main(env_cfg, agent_cfg):
+        del env_cfg
+        assert agent_cfg.class_name == "OnPolicyFlowRunner"
+        assert agent_cfg.policy.class_name == "ActorCriticFPO"
+        assert agent_cfg.algorithm.class_name == "FPO"
+        assert agent_cfg.algorithm.clip_param == 0.15
+        assert agent_cfg.algorithm.ema_decay == 0.9
+        assert agent_cfg.policy.sampling_steps == 32
+
+    main()
+    sys.argv = [sys.argv[0]]
+    hydra.core.global_hydra.GlobalHydra.instance().clear()

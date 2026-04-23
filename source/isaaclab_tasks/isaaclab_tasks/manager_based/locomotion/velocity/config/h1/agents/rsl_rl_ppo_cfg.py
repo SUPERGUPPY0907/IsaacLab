@@ -7,6 +7,8 @@ from isaaclab.utils import configclass
 
 from isaaclab_rl.rsl_rl import (
     RslRlBelmGenpoActorCriticCfg,
+    RslRlFpoActorCriticCfg,
+    RslRlFpoAlgorithmCfg,
     RslRlGenpoActorCriticCfg,
     RslRlGenpoAlgorithmCfg,
     RslRlOnPolicyRunnerCfg,
@@ -42,6 +44,46 @@ class H1RoughPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         lam=0.95,
         desired_kl=0.01,
         max_grad_norm=1.0,
+    )
+
+
+@configclass
+class H1RoughFPORunnerCfg(RslRlOnPolicyRunnerCfg):
+    class_name = "OnPolicyFlowRunner"
+    num_steps_per_env = 24
+    max_iterations = 3000
+    save_interval = 50
+    experiment_name = "h1_rough_fpo"
+    wandb_project = "h1_rough_fpo"
+    policy = RslRlFpoActorCriticCfg(
+        init_noise_std=1.0,
+        actor_obs_normalization=False,
+        critic_obs_normalization=False,
+        actor_hidden_dims=[512, 256, 128],
+        critic_hidden_dims=[512, 256, 128],
+        activation="elu",
+        timestep_embed_dim=8,
+        sampling_steps=64,
+        cfm_loss_reduction="sqrt",
+        action_perturb_std=0.02,
+    )
+    algorithm = RslRlFpoAlgorithmCfg(
+        value_loss_coef=1.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        entropy_coef=0.0,
+        num_learning_epochs=32,
+        num_mini_batches=4,
+        learning_rate=1.0e-3,
+        weight_decay=1.0e-4,
+        schedule="fixed",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=1.0e-4,
+        max_grad_norm=1.0,
+        trust_region_mode="aspo",
+        ema_decay=0.95,
+        ema_warmup_steps=500,
     )
 
 
