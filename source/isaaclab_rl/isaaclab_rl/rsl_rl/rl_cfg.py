@@ -142,6 +142,74 @@ class RslRlFpoActorCriticCfg(RslRlPpoActorCriticCfg):
 
 
 @configclass
+class RslRlPolicyFlowActorCriticCfg:
+    """Configuration for the PolicyFlow actor-critic networks."""
+
+    class_name: str = "ActorCriticPolicyFlow"
+    """The policy class name. Default is ActorCriticPolicyFlow."""
+
+    actor_obs_normalization: bool = MISSING
+    """Whether to normalize the observation for the actor network."""
+
+    critic_obs_normalization: bool = MISSING
+    """Whether to normalize the observation for the critic network."""
+
+    actor_hidden_dims: list[int] = MISSING
+    """The hidden dimensions of the actor network."""
+
+    critic_hidden_dims: list[int] = MISSING
+    """The hidden dimensions of the critic network."""
+
+    activation: str = MISSING
+    """Shared activation function used when explicit activation lists are not provided."""
+
+    actor_activations: list[str] | None = None
+    """Optional activation sequence for the flow network."""
+
+    critic_activations: list[str] | None = None
+    """Optional activation sequence for the critic network."""
+
+    flow_condition_hidden_dims: list[int] | None = None
+    """Optional hidden dimensions for the conditioning MLP when ``flow_conditioning=mlp``."""
+
+    flow_condition_activations: list[str] | None = None
+    """Optional activation sequence for the conditioning MLP."""
+
+    flow_embedding_dim: int = 64
+    """Embedding dimension used by the flow actor."""
+
+    flow_sample_steps: int = 10
+    """Number of flow sampling steps used during action generation."""
+
+    flow_sample_step_schedule: str = "uniform_continuous"
+    """Schedule used to step through flow sampling time."""
+
+    flow_interpolation_type: str = "rectified_flow"
+    """Interpolation type used by the flow actor."""
+
+    flow_timestep_embedding_type: str = "fourier"
+    """Timestep embedding type used by the flow actor."""
+
+    flow_conditioning: str = "linear"
+    """Conditioning module used by the flow actor."""
+
+    flow_use_ema: bool = False
+    """Whether to use the actor EMA weights for flow sampling."""
+
+    flow_ema_rate: float = 0.995
+    """EMA decay used by the flow actor when EMA sampling is enabled."""
+
+    variance_log_std_max: float = 4.0
+    """Upper clamp for the learned Gaussian log standard deviation."""
+
+    variance_log_std_min: float = -20.0
+    """Lower clamp for the learned Gaussian log standard deviation."""
+
+    variance_std_init: float = 1.0
+    """Initial standard deviation for the Gaussian action residual."""
+
+
+@configclass
 class RslRlLeapfrogActorCriticCfg(RslRlPpoActorCriticCfg):
     """Configuration for the leapfrog-flow actor-critic networks."""
 
@@ -412,6 +480,71 @@ class RslRlFpoAlgorithmCfg(RslRlPpoAlgorithmCfg):
 
 
 @configclass
+class RslRlPolicyFlowAlgorithmCfg:
+    """Configuration for the PolicyFlow algorithm."""
+
+    class_name: str = "PolicyFlow"
+    """The algorithm class name. Default is PolicyFlow."""
+
+    num_learning_epochs: int = MISSING
+    """The number of learning epochs per update."""
+
+    num_mini_batches: int = MISSING
+    """The number of mini-batches per update."""
+
+    learning_rate: float = MISSING
+    """The learning rate for the policy."""
+
+    schedule: str = "adaptive"
+    """The learning rate schedule."""
+
+    gamma: float = MISSING
+    """The discount factor."""
+
+    lam: float = MISSING
+    """The lambda parameter for Generalized Advantage Estimation (GAE)."""
+
+    desired_kl: float = MISSING
+    """The desired KL divergence used by the adaptive scheduler."""
+
+    max_grad_norm: float = MISSING
+    """The maximum gradient norm."""
+
+    value_loss_coef: float = MISSING
+    """The coefficient for the value loss."""
+
+    use_clipped_value_loss: bool = True
+    """Whether to clip predicted values in the value loss."""
+
+    clip_param: float = MISSING
+    """The clipping parameter for the policy ratio."""
+
+    time_limit_bootstrap: bool = True
+    """Whether to bootstrap truncated episodes using the value estimate."""
+
+    gaussian_entropy_loss_scale: float = 0.0025
+    """Coefficient for the Gaussian residual entropy regularization."""
+
+    brownian_reg_loss_scale: float = 0.0025
+    """Coefficient for the Brownian regularization term."""
+
+    value_clip: float = 0.2
+    """Clipping range for predicted values when value clipping is enabled."""
+
+    degenerate2gaussian: bool = False
+    """Whether to collapse the flow base distribution to a Gaussian at sampling time."""
+
+    optimizer: str = "adamw"
+    """Optimizer used by PolicyFlow."""
+
+    optimizer_kwargs: dict[str, float] = {"weight_decay": 1.0e-5}
+    """Keyword arguments forwarded to the optimizer."""
+
+    learning_rate_scheduler_kwargs: dict[str, float] = {"kl_threshold": 0.01}
+    """Keyword arguments forwarded to the adaptive KL scheduler."""
+
+
+@configclass
 class RslRlLeapfrogAlgorithmCfg(RslRlPpoAlgorithmCfg):
     """Configuration for the leapfrog-flow PPO algorithm."""
 
@@ -552,3 +685,17 @@ class RslRlOnPolicyRunnerCfg(RslRlBaseRunnerCfg):
 
     algorithm: RslRlPpoAlgorithmCfg = MISSING
     """The algorithm configuration."""
+
+
+@configclass
+class RslRlOnPolicyFlowRunnerCfg(RslRlBaseRunnerCfg):
+    """Configuration of the runner for PolicyFlow."""
+
+    class_name: str = "OnPolicyFlowRunner"
+    """The runner class name. Default is OnPolicyFlowRunner."""
+
+    policy: RslRlPolicyFlowActorCriticCfg = MISSING
+    """The PolicyFlow policy configuration."""
+
+    algorithm: RslRlPolicyFlowAlgorithmCfg = MISSING
+    """The PolicyFlow algorithm configuration."""

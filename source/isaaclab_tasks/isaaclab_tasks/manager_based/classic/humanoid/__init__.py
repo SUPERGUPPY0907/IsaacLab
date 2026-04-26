@@ -26,6 +26,7 @@ gym.register(
         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_cfg.yaml",
         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
         "fpo": f"{agents.__name__}.rsl_rl_ppo_cfg:HumanoidFPORunnerCfg",
+        "policyflow": f"{agents.__name__}.rsl_rl_ppo_cfg:HumanoidPolicyFlowRunnerCfg",
         "genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:HumanoidGenPORunnerCfg",
         "belmgenpo": f"{agents.__name__}.rsl_rl_ppo_cfg:HumanoidBELMGenPORunnerCfg",
         "belm_genpo": f"{agents.__name__}.rsl_rl_ppo_cfg:HumanoidBELMGenPORunnerCfg",

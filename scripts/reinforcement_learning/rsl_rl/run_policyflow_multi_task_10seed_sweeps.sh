@@ -9,23 +9,25 @@ RSL_RL_ROOT="${RSL_RL_ROOT:-/home/superguppy/rsl_rl}"
 
 DEFAULT_TASKS="Isaac-Ant-v0,Isaac-Humanoid-v0,Isaac-Open-Drawer-Franka-v0,Isaac-Velocity-Rough-Anymal-D-v0,Isaac-Velocity-Rough-Unitree-Go2-v0,Isaac-Velocity-Rough-G1-v0,Isaac-Velocity-Rough-H1-v0,Isaac-Tracking-LocoManip-Digit-v0"
 TASKS="${TASKS:-${TASK:-${DEFAULT_TASKS}}}"
-AGENT="${AGENT:-belm_genpo}"
+AGENT="${AGENT:-policyflow}"
 SEEDS="${SEEDS:-42,43,44,45,46,47,48,49,50,51}"
 GPU_IDS="${GPU_IDS:-0,1,2,3,4,5,6,7}"
 HEADLESS="${HEADLESS:-1}"
 NUM_ENVS="${NUM_ENVS:-}"
 MAX_ITERATIONS="${MAX_ITERATIONS:-}"
 SAVE_INTERVAL="${SAVE_INTERVAL:-}"
-EXPERIMENT_PREFIX="${EXPERIMENT_PREFIX:-belm_genpo_10seed}"
+EXPERIMENT_PREFIX="${EXPERIMENT_PREFIX:-policyflow_10seed}"
 WANDB_PROJECT_PREFIX="${WANDB_PROJECT_PREFIX:-}"
-LAUNCH_LOG_DIR="${LAUNCH_LOG_DIR:-${ISAACLAB_ROOT}/logs/belm_genpo_multi_task_10seed_sweeps}"
+LAUNCH_LOG_DIR="${LAUNCH_LOG_DIR:-${ISAACLAB_ROOT}/logs/policyflow_multi_task_10seed_sweeps}"
 INSTALL_EDITABLE="${INSTALL_EDITABLE:-0}"
 SLOT_POLL_INTERVAL="${SLOT_POLL_INTERVAL:-10}"
 
-LAG_COEFF="${LAG_COEFF:-}"
-A_COEFF="${A_COEFF:-}"
-B_COEFF="${B_COEFF:-}"
-EPS_COEFF="${EPS_COEFF:-}"
+FLOW_SAMPLE_STEPS="${FLOW_SAMPLE_STEPS:-}"
+FLOW_CONDITIONING="${FLOW_CONDITIONING:-}"
+GAUSSIAN_ENTROPY_LOSS_SCALE="${GAUSSIAN_ENTROPY_LOSS_SCALE:-}"
+BROWNIAN_REG_LOSS_SCALE="${BROWNIAN_REG_LOSS_SCALE:-}"
+FLOW_USE_EMA="${FLOW_USE_EMA:-}"
+FLOW_EMA_RATE="${FLOW_EMA_RATE:-}"
 
 TRAIN_SCRIPT="scripts/reinforcement_learning/rsl_rl/train.py"
 
@@ -35,40 +37,36 @@ Usage:
   bash ${0##*/} [--skip-install]
 
 Environment overrides:
-  ISAACLAB_ROOT        IsaacLab root directory. Default: ${ISAACLAB_ROOT_DEFAULT}
-  RSL_RL_ROOT          Local rsl_rl checkout. Default: /home/superguppy/rsl_rl
-  TASKS                Comma-separated tasks. Default: ${DEFAULT_TASKS}
-  TASK                 Backward-compatible single-task override when TASKS is unset.
-  AGENT                BELM agent key. Default: belm_genpo
-                       Supported: belm_genpo, belmgenpo
-  SEEDS                Comma-separated seeds. Default: 42,43,44,45,46,47,48,49,50,51
-  GPU_IDS              Comma-separated GPU ids. Default: 0,1,2,3,4,5,6,7
-  HEADLESS             1 to add --headless, 0 otherwise. Default: 1
-  NUM_ENVS             Optional --num_envs override.
-  MAX_ITERATIONS       Optional --max_iterations override.
-  SAVE_INTERVAL        Optional Hydra override for agent.save_interval.
-  EXPERIMENT_PREFIX    Experiment name prefix. Default: belm_genpo_10seed
-  WANDB_PROJECT_PREFIX Optional prefix for generated wandb projects.
-                       Project format: <prefix_>task_slug_belm_genpo
-  LAUNCH_LOG_DIR       Per-run log directory. Default: logs/belm_genpo_multi_task_10seed_sweeps
-  INSTALL_EDITABLE     1 to install local rsl_rl into IsaacLab env before running.
-  SLOT_POLL_INTERVAL   Seconds to wait before checking for a free GPU slot. Default: 10
+  ISAACLAB_ROOT                IsaacLab root directory. Default: ${ISAACLAB_ROOT_DEFAULT}
+  RSL_RL_ROOT                  Local rsl_rl checkout. Default: /home/superguppy/rsl_rl
+  TASKS                        Comma-separated tasks. Default: ${DEFAULT_TASKS}
+  TASK                         Backward-compatible single-task override when TASKS is unset.
+  AGENT                        PolicyFlow agent key. Default: policyflow
+  SEEDS                        Comma-separated seeds. Default: 42,43,44,45,46,47,48,49,50,51
+  GPU_IDS                      Comma-separated GPU ids. Default: 0,1,2,3,4,5,6,7
+  HEADLESS                     1 to add --headless, 0 otherwise. Default: 1
+  NUM_ENVS                     Optional --num_envs override.
+  MAX_ITERATIONS               Optional --max_iterations override.
+  SAVE_INTERVAL                Optional Hydra override for agent.save_interval.
+  EXPERIMENT_PREFIX            Experiment name prefix. Default: policyflow_10seed
+  WANDB_PROJECT_PREFIX         Optional prefix for generated wandb projects.
+                               Project format: <prefix_>task_slug_policyflow
+  LAUNCH_LOG_DIR               Per-run log directory. Default: logs/policyflow_multi_task_10seed_sweeps
+  INSTALL_EDITABLE             1 to install local rsl_rl into IsaacLab env before running.
+  SLOT_POLL_INTERVAL           Seconds to wait before checking for a free GPU slot. Default: 10
 
-BELM policy overrides:
-  LAG_COEFF            Tied BELM coefficient. When set, force:
-                       agent.policy.a_coeff=null
-                       agent.policy.b_coeff=null
-                       agent.policy.eps_coeff=null
-                       agent.policy.lag_coeff=<value>
-  A_COEFF              Untied BELM a coefficient. If any of A/B/EPS is set, force:
-  B_COEFF                agent.policy.lag_coeff=null
-  EPS_COEFF            Unspecified untied coeffs keep task/default config values.
-                       Do not combine LAG_COEFF with A_COEFF/B_COEFF/EPS_COEFF.
+PolicyFlow overrides:
+  FLOW_SAMPLE_STEPS            Optional Hydra override for agent.policy.flow_sample_steps.
+  FLOW_CONDITIONING            Optional Hydra override for agent.policy.flow_conditioning.
+  GAUSSIAN_ENTROPY_LOSS_SCALE  Optional Hydra override for agent.algorithm.gaussian_entropy_loss_scale.
+  BROWNIAN_REG_LOSS_SCALE      Optional Hydra override for agent.algorithm.brownian_reg_loss_scale.
+  FLOW_USE_EMA                 Optional Hydra override for agent.policy.flow_use_ema.
+  FLOW_EMA_RATE                Optional Hydra override for agent.policy.flow_ema_rate.
 
 Examples:
   bash ${0##*/}
-  TASKS=Isaac-Humanoid-v0 A_COEFF=0.25 B_COEFF=0.75 EPS_COEFF=1.0 bash ${0##*/}
-  TASKS=Isaac-Humanoid-v0 LAG_COEFF=0.97 SEEDS=0,1 GPU_IDS=0,1 bash ${0##*/}
+  TASKS=Isaac-Humanoid-v0 FLOW_SAMPLE_STEPS=32 SEEDS=0,1 GPU_IDS=0,1 bash ${0##*/}
+  TASKS=Isaac-Velocity-Rough-G1-v0 FLOW_CONDITIONING=mlp BROWNIAN_REG_LOSS_SCALE=0.0 bash ${0##*/}
 EOF
 }
 
@@ -111,13 +109,14 @@ task_slug() {
         Isaac-Humanoid-v0) echo "humanoid" ;;
         Isaac-Lift-Cube-Franka-v0) echo "franka_lift_cube" ;;
         Isaac-Open-Drawer-Franka-v0) echo "franka_open_drawer" ;;
+        Isaac-Stack-Cube-Franka-v0) echo "franka_stack_cube" ;;
         Isaac-Velocity-Rough-Anymal-D-v0) echo "anymal_d_rough" ;;
         Isaac-Velocity-Rough-Unitree-Go2-v0) echo "unitree_go2_rough" ;;
         Isaac-Velocity-Rough-H1-v0) echo "h1_rough" ;;
         Isaac-Velocity-Rough-G1-v0) echo "g1_rough" ;;
         Isaac-Tracking-LocoManip-Digit-v0) echo "digit_loco_manip" ;;
         *)
-            echo "Unsupported task for BELM-GenPO sweep: ${task}" >&2
+            echo "Unsupported task for PolicyFlow sweep: ${task}" >&2
             exit 1
             ;;
     esac
@@ -126,79 +125,56 @@ task_slug() {
 canonical_agent() {
     local agent="$1"
     case "${agent}" in
-        belmgenpo | belm_genpo) echo "belm_genpo" ;;
+        policyflow) echo "policyflow" ;;
         *)
-            echo "Unsupported agent '${agent}'. Use belm_genpo or belmgenpo." >&2
+            echo "Unsupported agent '${agent}'. Use policyflow." >&2
             exit 1
             ;;
     esac
 }
 
-has_untied_policy_override() {
-    [[ -n "$(trim_value "${A_COEFF}")" || -n "$(trim_value "${B_COEFF}")" || -n "$(trim_value "${EPS_COEFF}")" ]]
-}
-
-validate_policy_overrides() {
-    local lag_value
-    lag_value="$(trim_value "${LAG_COEFF}")"
-
-    if [[ -n "${lag_value}" ]] && has_untied_policy_override; then
-        echo "Do not combine LAG_COEFF with A_COEFF/B_COEFF/EPS_COEFF." >&2
-        exit 1
-    fi
-}
-
-policy_mode() {
-    local lag_value
-    lag_value="$(trim_value "${LAG_COEFF}")"
-
-    if [[ -n "${lag_value}" ]]; then
-        echo "tied"
-    elif has_untied_policy_override; then
-        echo "untied"
-    else
-        echo "default"
-    fi
+has_policy_override() {
+    [[ -n "${FLOW_SAMPLE_STEPS}" || -n "${FLOW_CONDITIONING}" || -n "${GAUSSIAN_ENTROPY_LOSS_SCALE}" || -n "${BROWNIAN_REG_LOSS_SCALE}" || -n "${FLOW_USE_EMA}" || -n "${FLOW_EMA_RATE}" ]]
 }
 
 policy_variant_label() {
-    local mode
-    mode="$(policy_mode)"
+    local -a parts=()
 
-    case "${mode}" in
-        default)
-            echo "default"
-            ;;
-        tied)
-            echo "lag$(sanitize_value "${LAG_COEFF}")"
-            ;;
-        untied)
-            local -a parts=()
+    if [[ -n "${FLOW_SAMPLE_STEPS}" ]]; then
+        parts+=("steps$(sanitize_value "${FLOW_SAMPLE_STEPS}")")
+    fi
+    if [[ -n "${FLOW_CONDITIONING}" ]]; then
+        parts+=("cond$(sanitize_value "${FLOW_CONDITIONING}")")
+    fi
+    if [[ -n "${GAUSSIAN_ENTROPY_LOSS_SCALE}" ]]; then
+        parts+=("gent$(sanitize_value "${GAUSSIAN_ENTROPY_LOSS_SCALE}")")
+    fi
+    if [[ -n "${BROWNIAN_REG_LOSS_SCALE}" ]]; then
+        parts+=("brown$(sanitize_value "${BROWNIAN_REG_LOSS_SCALE}")")
+    fi
+    if [[ -n "${FLOW_USE_EMA}" ]]; then
+        parts+=("ema$(sanitize_value "${FLOW_USE_EMA}")")
+    fi
+    if [[ -n "${FLOW_EMA_RATE}" ]]; then
+        parts+=("emar$(sanitize_value "${FLOW_EMA_RATE}")")
+    fi
 
-            if [[ -n "$(trim_value "${A_COEFF}")" ]]; then
-                parts+=("a$(sanitize_value "${A_COEFF}")")
-            fi
-            if [[ -n "$(trim_value "${B_COEFF}")" ]]; then
-                parts+=("b$(sanitize_value "${B_COEFF}")")
-            fi
-            if [[ -n "$(trim_value "${EPS_COEFF}")" ]]; then
-                parts+=("eps$(sanitize_value "${EPS_COEFF}")")
-            fi
-
-            local joined
-            joined="$(IFS=_; echo "${parts[*]}")"
-            echo "${joined}"
-            ;;
-    esac
+    if [[ ${#parts[@]} -eq 0 ]]; then
+        echo "default"
+    else
+        local joined
+        joined="$(IFS=_; echo "${parts[*]}")"
+        echo "${joined}"
+    fi
 }
 
 build_wandb_project() {
     local task_label="$1"
 
     if [[ -n "${WANDB_PROJECT_PREFIX}" ]]; then
-        echo "${WANDB_PROJECT_PREFIX}_${task_label}_belm_genpo"
+        echo "${WANDB_PROJECT_PREFIX}_${task_label}_policyflow"
     else
-        echo "${task_label}_belm_genpo"
+        echo "${task_label}_policyflow"
     fi
 }
 
@@ -206,10 +182,9 @@ build_experiment_name() {
     local task_label="$1"
     local seed="$2"
     local prefix=""
-    local variant_label
+    local variant_label="policyflow"
 
-    variant_label="belm_genpo"
-    if [[ "$(policy_mode)" != "default" ]]; then
+    if has_policy_override; then
         variant_label="${variant_label}_$(policy_variant_label)"
     fi
 
@@ -395,31 +370,24 @@ wait_for_all_jobs() {
 
 append_policy_overrides() {
     local -n out_ref="$1"
-    local lag_value
-    local a_value
-    local b_value
-    local eps_value
 
-    lag_value="$(trim_value "${LAG_COEFF}")"
-    a_value="$(trim_value "${A_COEFF}")"
-    b_value="$(trim_value "${B_COEFF}")"
-    eps_value="$(trim_value "${EPS_COEFF}")"
-
-    if [[ -n "${lag_value}" ]]; then
-        out_ref+=(
-            "agent.policy.a_coeff=null"
-            "agent.policy.b_coeff=null"
-            "agent.policy.eps_coeff=null"
-            "agent.policy.lag_coeff=${lag_value}"
-        )
-        return 0
+    if [[ -n "${FLOW_SAMPLE_STEPS}" ]]; then
+        out_ref+=("agent.policy.flow_sample_steps=${FLOW_SAMPLE_STEPS}")
     fi
-
-    if [[ -n "${a_value}" || -n "${b_value}" || -n "${eps_value}" ]]; then
-        out_ref+=("agent.policy.lag_coeff=null")
-        [[ -n "${a_value}" ]] && out_ref+=("agent.policy.a_coeff=${a_value}")
-        [[ -n "${b_value}" ]] && out_ref+=("agent.policy.b_coeff=${b_value}")
-        [[ -n "${eps_value}" ]] && out_ref+=("agent.policy.eps_coeff=${eps_value}")
+    if [[ -n "${FLOW_CONDITIONING}" ]]; then
+        out_ref+=("agent.policy.flow_conditioning=${FLOW_CONDITIONING}")
+    fi
+    if [[ -n "${GAUSSIAN_ENTROPY_LOSS_SCALE}" ]]; then
+        out_ref+=("agent.algorithm.gaussian_entropy_loss_scale=${GAUSSIAN_ENTROPY_LOSS_SCALE}")
+    fi
+    if [[ -n "${BROWNIAN_REG_LOSS_SCALE}" ]]; then
+        out_ref+=("agent.algorithm.brownian_reg_loss_scale=${BROWNIAN_REG_LOSS_SCALE}")
+    fi
+    if [[ -n "${FLOW_USE_EMA}" ]]; then
+        out_ref+=("agent.policy.flow_use_ema=${FLOW_USE_EMA}")
+    fi
+    if [[ -n "${FLOW_EMA_RATE}" ]]; then
+        out_ref+=("agent.policy.flow_ema_rate=${FLOW_EMA_RATE}")
     fi
 }
 
@@ -437,7 +405,7 @@ schedule_variant() {
     agent_entry="$(canonical_agent "${AGENT}")"
     experiment_name="$(build_experiment_name "${task_label}" "${seed}")"
     wandb_project="$(build_wandb_project "${task_label}")"
-    label="belm_genpo/$(policy_mode)"
+    label="policyflow/$(policy_variant_label)"
 
     overrides+=("agent.seed=${seed}")
     append_policy_overrides overrides
@@ -450,7 +418,6 @@ trap 'terminate_running_jobs; exit 130' INT TERM
 declare -a tasks=()
 declare -a seeds=()
 
-validate_policy_overrides
 csv_to_array "${TASKS}" tasks
 csv_to_array "${SEEDS}" seeds
 initialize_gpu_ids
@@ -474,11 +441,12 @@ echo "Num envs override: ${NUM_ENVS:-<task cfg default>}"
 echo "Experiment prefix: ${EXPERIMENT_PREFIX}"
 echo "wandb project prefix: ${WANDB_PROJECT_PREFIX:-<none>}"
 echo "Launcher log dir: ${LAUNCH_LOG_DIR}"
-echo "BELM policy mode: $(policy_mode)"
-echo "LAG_COEFF: ${LAG_COEFF:-<unset>}"
-echo "A_COEFF: ${A_COEFF:-<unset>}"
-echo "B_COEFF: ${B_COEFF:-<unset>}"
-echo "EPS_COEFF: ${EPS_COEFF:-<unset>}"
+echo "FLOW_SAMPLE_STEPS: ${FLOW_SAMPLE_STEPS:-<unset>}"
+echo "FLOW_CONDITIONING: ${FLOW_CONDITIONING:-<unset>}"
+echo "GAUSSIAN_ENTROPY_LOSS_SCALE: ${GAUSSIAN_ENTROPY_LOSS_SCALE:-<unset>}"
+echo "BROWNIAN_REG_LOSS_SCALE: ${BROWNIAN_REG_LOSS_SCALE:-<unset>}"
+echo "FLOW_USE_EMA: ${FLOW_USE_EMA:-<unset>}"
+echo "FLOW_EMA_RATE: ${FLOW_EMA_RATE:-<unset>}"
 
 if [[ "${INSTALL_EDITABLE}" == "1" ]]; then
     echo
@@ -495,7 +463,7 @@ for task in "${tasks[@]}"; do
     task_label="$(task_slug "${task}")"
 
     echo
-    echo "==== Starting BELM-GenPO 10-seed sweep for ${task} (${task_label}) ===="
+    echo "==== Starting PolicyFlow 10-seed sweep for ${task} (${task_label}) ===="
 
     for seed in "${seeds[@]}"; do
         seed="$(trim_value "${seed}")"
@@ -508,7 +476,7 @@ wait_for_all_jobs
 
 echo
 if [[ ${failed_jobs} -ne 0 ]]; then
-    echo "BELM-GenPO multi-task 10-seed sweep finished with ${failed_jobs} failed job(s)." >&2
+    echo "PolicyFlow multi-task 10-seed sweep finished with ${failed_jobs} failed job(s)." >&2
     exit 1
 fi
-echo "BELM-GenPO multi-task 10-seed sweep finished successfully."
+echo "PolicyFlow multi-task 10-seed sweep finished successfully."

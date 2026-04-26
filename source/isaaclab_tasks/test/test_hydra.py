@@ -179,3 +179,28 @@ def test_h1_fpo_hydra_config_and_overrides():
     main()
     sys.argv = [sys.argv[0]]
     hydra.core.global_hydra.GlobalHydra.instance().clear()
+
+
+def test_humanoid_policyflow_hydra_config_and_overrides():
+    """Test that the Humanoid PolicyFlow agent entry point resolves and accepts overrides."""
+
+    sys.argv = [
+        sys.argv[0],
+        "agent.policy.flow_sample_steps=32",
+        "agent.policy.flow_conditioning=mlp",
+        "agent.algorithm.brownian_reg_loss_scale=0.01",
+    ]
+
+    @hydra_task_config_test("Isaac-Humanoid-v0", "policyflow")
+    def main(env_cfg, agent_cfg):
+        del env_cfg
+        assert agent_cfg.class_name == "OnPolicyFlowRunner"
+        assert agent_cfg.policy.class_name == "ActorCriticPolicyFlow"
+        assert agent_cfg.algorithm.class_name == "PolicyFlow"
+        assert agent_cfg.policy.flow_sample_steps == 32
+        assert agent_cfg.policy.flow_conditioning == "mlp"
+        assert agent_cfg.algorithm.brownian_reg_loss_scale == 0.01
+
+    main()
+    sys.argv = [sys.argv[0]]
+    hydra.core.global_hydra.GlobalHydra.instance().clear()

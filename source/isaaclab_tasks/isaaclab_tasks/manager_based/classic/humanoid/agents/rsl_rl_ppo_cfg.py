@@ -24,7 +24,10 @@ from isaaclab_rl.rsl_rl import (
     RslRlGenpoPlusPlusAlgorithmCfg,
     RslRlGenpoPushforwardClipAlgorithmCfg,
     RslRlGenpoU0ClipAlgorithmCfg,
+    RslRlOnPolicyFlowRunnerCfg,
     RslRlOnPolicyRunnerCfg,
+    RslRlPolicyFlowActorCriticCfg,
+    RslRlPolicyFlowAlgorithmCfg,
     RslRlPpoActorCriticCfg,
     RslRlPpoAlgorithmCfg,
 )
@@ -98,6 +101,52 @@ class HumanoidFPORunnerCfg(RslRlOnPolicyRunnerCfg):
         trust_region_mode="aspo",
         ema_decay=0.95,
         ema_warmup_steps=500,
+    )
+
+
+@configclass
+class HumanoidPolicyFlowRunnerCfg(RslRlOnPolicyFlowRunnerCfg):
+    class_name = "OnPolicyFlowRunner"
+    num_steps_per_env = 32
+    max_iterations = 1000
+    save_interval = 1000
+    experiment_name = "humanoid_policyflow"
+    wandb_project = "humanoid_policyflow"
+    policy = RslRlPolicyFlowActorCriticCfg(
+        actor_obs_normalization=True,
+        critic_obs_normalization=True,
+        actor_hidden_dims=[400, 200, 100],
+        critic_hidden_dims=[400, 200, 100],
+        activation="mish",
+        flow_embedding_dim=64,
+        flow_sample_steps=10,
+        flow_sample_step_schedule="uniform_continuous",
+        flow_interpolation_type="rectified_flow",
+        flow_timestep_embedding_type="fourier",
+        flow_conditioning="linear",
+        flow_use_ema=False,
+        flow_ema_rate=0.995,
+        variance_std_init=1.0,
+        variance_log_std_min=-20.0,
+        variance_log_std_max=4.0,
+    )
+    algorithm = RslRlPolicyFlowAlgorithmCfg(
+        value_loss_coef=2.0,
+        use_clipped_value_loss=True,
+        clip_param=0.2,
+        num_learning_epochs=5,
+        num_mini_batches=4,
+        learning_rate=5.0e-4,
+        schedule="adaptive",
+        gamma=0.99,
+        lam=0.95,
+        desired_kl=0.01,
+        max_grad_norm=1.0,
+        gaussian_entropy_loss_scale=0.0025,
+        brownian_reg_loss_scale=0.0025,
+        optimizer="adamw",
+        optimizer_kwargs={"weight_decay": 1.0e-5},
+        learning_rate_scheduler_kwargs={"kl_threshold": 0.01},
     )
 
 
